@@ -19,5 +19,4 @@
     "outDir": "output",
     "rootDir": "src"
   },
-  "exclude": ["tests", "output"]
 }

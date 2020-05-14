@@ -5,7 +5,7 @@
   "main": "output/index.js",
   "scripts": {
     "build": "npx tsc",
-    "run": "npm run-script build & node ./output/ test.ts"
+    "run": "npm run-script build & node ./output/ base"
   },
   "repository": {
     "type": "git",
@@ -19,6 +19,7 @@
   "homepage": "https://github.com/KeySlam/Tale#readme",
   "dependencies": {
     "@types/node": "^13.13.5",
+    "ts-morph": "^7.0.3",
     "typescript": "^3.8.3"
   }
 }

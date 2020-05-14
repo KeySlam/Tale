@@ -1,10 +1,35 @@
-import { readFileSync } from "fs";
-import * as ts from "typescript";
+import { Project, ProjectOptions } from "ts-morph";
 
+// Load project
+let projectName = process.argv.slice(2);
+
+let projectOptions: ProjectOptions = {}
+projectOptions.tsConfigFilePath = `tests/${projectName}/tsconfig.json`;
+
+let project = new Project(projectOptions);
+
+// Check for compile time errors
+let diagnostics = project.getPreEmitDiagnostics();
+if (diagnostics.length > 0) {
+    console.log(project.formatDiagnosticsWithColorAndContext(diagnostics));
+    
+    // Probably stop execution now?
+}
+
+let sourceFiles = project.getSourceFiles();
+sourceFiles.forEach(sourceFile => {
+    console.log(`File: ${sourceFile.getFilePath()}`);
+
+    sourceFile.getDescendants().forEach(node => {
+        console.log(node.getKindName());
+    });
+});
+
+/*
 class Scope {
     variableDeclarations: VariableDeclaration[] = [];
 
-    parent?: Scope = null;
+    parent?: Scope = undefined;
     children: Scope[] = [];
 
     constructor(parent?: Scope) {
@@ -37,7 +62,7 @@ class Scope {
 
 class VariableDeclaration {
     name: string;
-    identifier: ts.Identifier = null;
+    identifier: ts.Identifier;
 
     constructor(name: string, identifier: ts.Identifier) {
         this.name = name;
@@ -83,23 +108,4 @@ let parseTypescriptAST = (node: ts.Node, scope: Scope): void => {
         }
     });
 }
-
-
-let fileNames = process.argv.slice(2);
-fileNames.forEach(fileName => {
-    let fullPath = (__dirname + "/" + fileName);
-
-    let sourceFile = ts.createSourceFile(
-        fileName,
-        readFileSync(fullPath).toString(),
-        ts.ScriptTarget.ES2015,
-        true
-    );
-
-    let startNode: ts.Node = sourceFile;
-    let rootScope: Scope = new Scope();
-    parseTypescriptAST(startNode, rootScope);
-
-    //console.log(rootScope);
-});
-
+*/
