@@ -2,6 +2,8 @@ import Scope from "./classes/scope";
 
 import * as TsAST from "ts-morph";
 import * as LuaAST from "./LuaAST";
+import { VariableLikeDeclaration } from "typescript";
+import fs from "fs";
 
 // Load project
 let projectName = process.argv.slice(2);
@@ -29,40 +31,120 @@ function getScope(node: TsAST.StatementedNode, parent?: Scope) : Scope {
     return scope;
 }
 
+function buildExpression(expression: TsAST.Expression) : LuaAST.Expression{
+    if (TsAST.TypeGuards.isBinaryExpression(expression)) {
+        const binaryExpression = expression as TsAST.BinaryExpression;
+
+        const token = binaryExpression.getOperatorToken().getText() as LuaAST.Operator; // TODO: Make this conversion more explicit?
+        const left = binaryExpression.getLeft();
+        const right = binaryExpression.getRight();
+
+        return new LuaAST.BinaryExpression(token, buildExpression(left), buildExpression(right));
+    } else if (TsAST.TypeGuards.isNumericLiteral(expression)) {
+        const numericLiteral = expression as TsAST.NumericLiteral;
+
+        const value = numericLiteral.getLiteralValue();
+
+        return new LuaAST.NumericLiteral(value);
+    }
+
+    return new LuaAST.NilLiteral();
+}
+
+function buildClass(classDeclaration: TsAST.ClassDeclaration) : LuaAST.ClassDeclaration {
+    const className = classDeclaration.getName()!; // TODO: This can be undefined? Look into it
+
+    let luaClassDeclaration = new LuaAST.ClassDeclaration(className);
+
+    classDeclaration.getStaticProperties().forEach(classStaticProperty => {
+        const propertyName = classStaticProperty.getName();
+        
+        // TODO: Can be PropertyDeclaration | GetAccessorDeclaration | SetAccessorDeclaration
+
+        if (TsAST.TypeGuards.isPropertyDeclaration(classStaticProperty)) {
+            let propertyDeclaration = classStaticProperty as TsAST.PropertyDeclaration;
+
+            const initializer = propertyDeclaration.getInitializer();
+
+            let luaAssignStatement : LuaAST.AssignStatement;
+
+            if (initializer != undefined) {
+                const expression = buildExpression(initializer);
+                
+                luaAssignStatement = new LuaAST.AssignStatement(className, propertyName, expression);
+                
+                luaClassDeclaration.children.push(luaAssignStatement);
+            } else {
+                // This should ever happen?
+            }
+
+            classStaticProperty.forget();
+        }
+    });
+
+    return luaClassDeclaration;
+}
+
 function buildLuaAST(sourceFile: TsAST.SourceFile) : LuaAST.SourceFile {
     const luaSourceFile = new LuaAST.SourceFile("test.lua", sourceFile.getFilePath()); // TODO: Get file name
     
-    sourceFile.getVariableDeclarations().forEach(variableDeclaration => { 
-        const name = variableDeclaration.getName()
-        const expression = variableDeclaration.getInitializer()?.getText();
+    sourceFile.getDescendants().forEach(descendant => {
+        if (descendant.wasForgotten()) {
+            return;
+        }
 
-        const luaVariableDeclaration = new LuaAST.VariableDeclaration(luaSourceFile, name, expression);
+        if (TsAST.TypeGuards.isVariableDeclaration(descendant)) {
+            let variableDeclaration = descendant as TsAST.VariableDeclaration;
 
-        luaSourceFile.children.push(luaVariableDeclaration);
+            const name = variableDeclaration.getName()
+            const initializer = variableDeclaration.getInitializer();
+
+            let luaLocalStatement : LuaAST.LocalStatement;
+
+            if (initializer != undefined) {
+                const expression = buildExpression(initializer);
+                
+                luaLocalStatement = new LuaAST.LocalStatement(name, expression);
+                
+                luaSourceFile.children.push(luaLocalStatement);
+            } else {
+                luaLocalStatement = new LuaAST.LocalStatement(name);
+
+                luaSourceFile.children.push(luaLocalStatement);
+            }
+
+            descendant.forget();
+            return;
+        }
+
+        if (TsAST.TypeGuards.isClassDeclaration(descendant)) {
+            let classDeclaration = descendant as TsAST.ClassDeclaration;
+
+            
+            let luaClassDeclaration = buildClass(classDeclaration);
+
+            luaSourceFile.addChild(luaClassDeclaration);
+
+            descendant.forget();
+            return;
+        }
     });
 
     return luaSourceFile;
-}
-
-function outputLuaFile(luaSourceFile : LuaAST.SourceFile) : string {
-    let output : string = "";
-
-    luaSourceFile.children.forEach(child => {
-        output += child.getStringRepresentation();
-        output += "\n";
-    });
-
-    return output;
 }
 
 let sourceFiles = project.getSourceFiles();
 sourceFiles.forEach(sourceFile => {
     console.log(`File: ${sourceFile.getFilePath()}`);
 
-    const luaSourceFile = buildLuaAST(sourceFile);
-    const luaFileOutput = outputLuaFile(luaSourceFile);
+    const luaFileOutput = buildLuaAST(sourceFile).getStringRepresentation();
 
     console.log(luaFileOutput);
+
+    // Temp output file
+    fs.writeFile("tests/base/output/main.lua", luaFileOutput, () => {
+
+    });
 
     /*
     sourceFile.getClasses().forEach(classDeclaration => {
