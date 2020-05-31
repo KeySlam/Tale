@@ -5,7 +5,8 @@
   "main": "output/index.js",
   "scripts": {
     "build": "npx tsc",
-    "run": "npm run-script build & node ./output/ base"
+    "run": "npm run-script build & node ./output/ base",
+    "run-build": "node ./output/ base"
   },
   "repository": {
     "type": "git",

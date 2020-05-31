@@ -1,6 +1,4 @@
-let a = 10;
-let b = 10;
+let a = 5 * 5;
+let b = a * 20;
 
-{
-    let c = a + b;
-}
+let c = 10 + 200;

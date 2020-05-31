@@ -1,12 +1,15 @@
-import { Project, ProjectOptions } from "ts-morph";
+import Scope from "./classes/scope";
+
+import * as TsAST from "ts-morph";
+import * as LuaAST from "./LuaAST";
 
 // Load project
 let projectName = process.argv.slice(2);
 
-let projectOptions: ProjectOptions = {}
+let projectOptions: TsAST.ProjectOptions = {}
 projectOptions.tsConfigFilePath = `tests/${projectName}/tsconfig.json`;
 
-let project = new Project(projectOptions);
+let project = new TsAST.Project(projectOptions);
 
 // Check for compile time errors
 let diagnostics = project.getPreEmitDiagnostics();
@@ -16,96 +19,57 @@ if (diagnostics.length > 0) {
     // Probably stop execution now?
 }
 
+function getScope(node: TsAST.StatementedNode, parent?: Scope) : Scope {
+    let scope = new Scope(parent);
+
+    node.getVariableDeclarations().forEach(variableDeclaration => {
+        scope.variableDeclarations.push(variableDeclaration);
+    });
+
+    return scope;
+}
+
+function buildLuaAST(sourceFile: TsAST.SourceFile) : LuaAST.SourceFile {
+    const luaSourceFile = new LuaAST.SourceFile("test.lua", sourceFile.getFilePath()); // TODO: Get file name
+    
+    sourceFile.getVariableDeclarations().forEach(variableDeclaration => { 
+        const name = variableDeclaration.getName()
+        const expression = variableDeclaration.getInitializer()?.getText();
+
+        const luaVariableDeclaration = new LuaAST.VariableDeclaration(luaSourceFile, name, expression);
+
+        luaSourceFile.children.push(luaVariableDeclaration);
+    });
+
+    return luaSourceFile;
+}
+
+function outputLuaFile(luaSourceFile : LuaAST.SourceFile) : string {
+    let output : string = "";
+
+    luaSourceFile.children.forEach(child => {
+        output += child.getStringRepresentation();
+        output += "\n";
+    });
+
+    return output;
+}
+
 let sourceFiles = project.getSourceFiles();
 sourceFiles.forEach(sourceFile => {
     console.log(`File: ${sourceFile.getFilePath()}`);
 
-    sourceFile.getDescendants().forEach(node => {
-        console.log(node.getKindName());
+    const luaSourceFile = buildLuaAST(sourceFile);
+    const luaFileOutput = outputLuaFile(luaSourceFile);
+
+    console.log(luaFileOutput);
+
+    /*
+    sourceFile.getClasses().forEach(classDeclaration => {
+        classDeclaration.getMethods().forEach(methodDeclaration => {
+            let methodScope = getScope(methodDeclaration, rootScope);
+            //console.log(methodScope);
+        });
     });
+    */
 });
-
-/*
-class Scope {
-    variableDeclarations: VariableDeclaration[] = [];
-
-    parent?: Scope = undefined;
-    children: Scope[] = [];
-
-    constructor(parent?: Scope) {
-        this.parent = parent;
-    }
-
-
-    isInScope(targetName: string): boolean {
-        for (let variableDeclaration of this.variableDeclarations) {
-            if (variableDeclaration.name == targetName) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    isInUpperScope(targetName: string): boolean {
-        if (this.parent !== undefined) {
-            return this.parent.isInAnyScope(targetName);
-        }
-
-        return false;
-    }
-
-    isInAnyScope(targetName: string): boolean {
-        return this.isInScope(targetName) || this.isInUpperScope(targetName);
-    }
-}
-
-class VariableDeclaration {
-    name: string;
-    identifier: ts.Identifier;
-
-    constructor(name: string, identifier: ts.Identifier) {
-        this.name = name;
-        this.identifier = identifier;
-    }
-}
-
-let parseTypescriptAST = (node: ts.Node, scope: Scope): void => {
-    node.getChildren().forEach(child => {
-        switch (child.kind) {
-            case ts.SyntaxKind.VariableDeclarationList:
-                let variableDeclarationList = child as ts.VariableDeclarationList;
-
-                variableDeclarationList.declarations.forEach(declaration => {
-                    let identifier = declaration.name as ts.Identifier;
-
-                    let variableName = identifier.escapedText as string;
-
-                    if (scope.isInScope(variableName)) {
-                        console.log(`Hiding '${variableName}' in this scope`);
-                    } else if (scope.isInAnyScope(variableName)) {
-                        console.log(`Hiding '${variableName}' in upper scope`);
-                    }
-
-                    let variableDeclaration = new VariableDeclaration(variableName, identifier);
-                    scope.variableDeclarations.push(variableDeclaration);
-                });
-
-                break;
-            case ts.SyntaxKind.Block:
-                let block = child as ts.Block;
-
-                let blockScope = new Scope(scope);
-                scope.children.push(blockScope);
-
-                parseTypescriptAST(child, blockScope);
-
-                break;
-            default:
-                parseTypescriptAST(child, scope);
-
-                break;
-        }
-    });
-}
-*/
