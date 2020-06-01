@@ -1,5 +1,3 @@
-import Scope from "./classes/scope";
-
 import * as TsAST from "ts-morph";
 import * as LuaAST from "./LuaAST";
 import { VariableLikeDeclaration } from "typescript";
@@ -21,15 +19,15 @@ if (diagnostics.length > 0) {
     // Probably stop execution now?
 }
 
-function getScope(node: TsAST.StatementedNode, parent?: Scope) : Scope {
-    let scope = new Scope(parent);
+// function getScope(node: TsAST.StatementedNode, parent?: Scope) : Scope {
+//     let scope = new Scope(parent);
 
-    node.getVariableDeclarations().forEach(variableDeclaration => {
-        scope.variableDeclarations.push(variableDeclaration);
-    });
+//     node.getVariableDeclarations().forEach(variableDeclaration => {
+//         scope.variableDeclarations.push(variableDeclaration);
+//     });
 
-    return scope;
-}
+//     return scope;
+// }
 
 function buildExpression(expression: TsAST.Expression) : LuaAST.Expression{
     if (TsAST.TypeGuards.isBinaryExpression(expression)) {
@@ -51,11 +49,15 @@ function buildExpression(expression: TsAST.Expression) : LuaAST.Expression{
     return new LuaAST.NilLiteral();
 }
 
-function buildClass(classDeclaration: TsAST.ClassDeclaration) : LuaAST.ClassDeclaration {
-    const className = classDeclaration.getName()!; // TODO: This can be undefined? Look into it
+function buildClass(parent: LuaAST.ScopedNode, classDeclaration: TsAST.ClassDeclaration) : LuaAST.ClassDeclaration {
+    const className = classDeclaration.getName()!; // TODO: This can be undefined, annonymous classes are a thing
 
+    //TODO: get rid of this, in Lua there is no ClassDeclaration
+    // We can turn this into a LocalStatement, with an FunctionCallExpression as value
     let luaClassDeclaration = new LuaAST.ClassDeclaration(className);
 
+    //TODO: use classDeclaration.getChildren().forEach() instead of this
+    // This will require to support building static, public, properties, methods, getters and setters.
     classDeclaration.getStaticProperties().forEach(classStaticProperty => {
         const propertyName = classStaticProperty.getName();
         
@@ -70,12 +72,13 @@ function buildClass(classDeclaration: TsAST.ClassDeclaration) : LuaAST.ClassDecl
 
             if (initializer != undefined) {
                 const expression = buildExpression(initializer);
-                
+
                 luaAssignStatement = new LuaAST.AssignStatement(className, propertyName, expression);
-                
-                luaClassDeclaration.children.push(luaAssignStatement);
+
+                luaClassDeclaration.addChild(luaAssignStatement);
             } else {
-                // This should ever happen?
+                // This can happen, but it only serves as a type definition
+                // No need to turn this node into Lua
             }
 
             classStaticProperty.forget();
@@ -121,7 +124,7 @@ function buildLuaAST(sourceFile: TsAST.SourceFile) : LuaAST.SourceFile {
             let classDeclaration = descendant as TsAST.ClassDeclaration;
 
             
-            let luaClassDeclaration = buildClass(classDeclaration);
+            let luaClassDeclaration = buildClass(luaSourceFile, classDeclaration);
 
             luaSourceFile.addChild(luaClassDeclaration);
 

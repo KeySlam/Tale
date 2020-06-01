@@ -1,17 +1,10 @@
-import { Node } from "./Node";
+import { ScopedNode } from "./Node";
 
-export class SourceFile extends Node {
-  children: Node[] = [];
-
+export class SourceFile extends ScopedNode {
   requireClassFactory = false;
 
   constructor(public name: string, public path: string) {
     super();
-  }
-
-  addChild(child: Node) {
-    this.children.push(child);
-    child.parent = this;
   }
 
   getStringRepresentation() {
