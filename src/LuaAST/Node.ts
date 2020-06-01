@@ -1,23 +1,9 @@
 export class Node {
   parent?: Node;
-  children: Node[];
 
-  constructor() {
-    this.children = [];
-  }
+  constructor() {}
 
-  addChild(child: Node) {
-    // TODO: Check if child has parent. Remove from there if needed?
-
-    this.children.push(child);
-    child.parent = this;
-  }
-
-  setParent(parent: Node) {
-    parent.addChild(parent);
-  }
-
-  getRootNode() : Node {
+  getRootNode(): Node {
     let currentNode: Node = this;
 
     while (currentNode.parent != undefined) {

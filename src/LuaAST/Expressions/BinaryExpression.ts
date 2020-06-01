@@ -2,19 +2,21 @@ import { Expression } from "./Expression";
 import { Operator } from "../Types/Operator";
 
 export class BinaryExpression extends Expression {
-  operator: Operator
-  left: Expression;
-  right: Expression;
-
-  constructor(operator: Operator, left: Expression, right: Expression) {
+  constructor(
+    public operator: Operator,
+    public left: Expression,
+    public right: Expression
+  ) {
     super();
-    
-    this.operator = operator;
-    this.left = left;
-    this.right = right;
+
+    left.parent = this;
+    right.parent = this;
   }
 
   getStringRepresentation() {
-    return `${this.left.getStringRepresentation()} ${this.operator} ${this.right.getStringRepresentation()}`; 
+    const left = this.left.getStringRepresentation();
+    const right = this.right.getStringRepresentation();
+
+    return `${left} ${this.operator} ${right}`;
   }
 }

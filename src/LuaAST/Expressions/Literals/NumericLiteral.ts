@@ -1,12 +1,8 @@
 import { Expression } from "../Expression";
 
 export class NumericLiteral extends Expression {
-  value: number;
-  
-  constructor(value: number) {
+  constructor(public value: number) {
     super();
-
-    this.value = value;
   }
 
   getStringRepresentation() {

@@ -1,26 +1,27 @@
 import { Node } from "./Node";
 
 export class SourceFile extends Node {
-  name: string;
-  path: string;
+  children: Node[] = [];
 
-  requireClassFactory = false; 
+  requireClassFactory = false;
 
-  constructor(name: string, path: string) {
+  constructor(public name: string, public path: string) {
     super();
+  }
 
-    this.name = name;
-    this.path = path;
+  addChild(child: Node) {
+    this.children.push(child);
+    child.parent = this;
   }
 
   getStringRepresentation() {
     let out = "";
 
     if (this.requireClassFactory) {
-      out += "local __ClassFactory = require(\"ClassFactory\");\n";
+      out += 'local __ClassFactory = require("ClassFactory")\n';
     }
 
-    this.children.forEach(child => {
+    this.children.forEach((child) => {
       out += child.getStringRepresentation();
       out += "\n";
     });
