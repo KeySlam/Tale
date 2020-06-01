@@ -1,5 +1,6 @@
-import { AssignStatement } from "./AssignStatement";
-import { LocalStatement } from "./LocalStatement";
+import * as TsAST from "ts-morph";
+
+export type Type = TsAST.Type<TsAST.ts.Type>;
 
 export class Node {
   parent?: Node;
@@ -14,14 +15,14 @@ export class Node {
     return currentNode;
   }
 
-  getParentScope(): ScopedNode|undefined {
-    let currentNode: Node|undefined = this.parent;
+  getParentScope(): ScopedNode | undefined {
+    let currentNode: Node | undefined = this.parent;
 
     while (currentNode !== undefined && !(currentNode instanceof ScopedNode)) {
-      currentNode = currentNode.parent
+      currentNode = currentNode.parent;
     }
 
-    return currentNode
+    return currentNode;
   }
 
   getStringRepresentation(): string {
@@ -29,28 +30,34 @@ export class Node {
   }
 }
 
+export class VariableDeclaration extends Node {
+  constructor(public name: string, public type: Type) {
+    super();
+  }
+}
+
 export class ScopedNode extends Node {
   children: Node[] = [];
-  variableDeclarations = new Map<string, LocalStatement>();
+  variableDeclarations = new Map<string, VariableDeclaration>();
 
-  addChild (child: Node) {
+  addChild(child: Node) {
     this.children.push(child);
     child.parent = this;
 
-    if (child instanceof LocalStatement) {
-      this.variableDeclarations.set(child.name, child)
+    if (child instanceof VariableDeclaration) {
+      this.variableDeclarations.set(child.name, child);
     }
   }
 
   isInScope(targetName: string): boolean {
-    return this.variableDeclarations.has(targetName)
+    return this.variableDeclarations.has(targetName);
   }
 
   isInUpperScope(targetName: string): boolean {
-      return !!this.getParentScope()?.isInAnyScope(targetName)
+    return !!this.getParentScope()?.isInAnyScope(targetName);
   }
 
   isInAnyScope(targetName: string): boolean {
-      return this.isInScope(targetName) || this.isInUpperScope(targetName);
+    return this.isInScope(targetName) || this.isInUpperScope(targetName);
   }
 }

@@ -99,6 +99,7 @@ function buildLuaAST(sourceFile: TsAST.SourceFile) : LuaAST.SourceFile {
         if (TsAST.TypeGuards.isVariableDeclaration(descendant)) {
             let variableDeclaration = descendant as TsAST.VariableDeclaration;
 
+            const type = variableDeclaration.getType()
             const name = variableDeclaration.getName()
             const initializer = variableDeclaration.getInitializer();
 
@@ -107,11 +108,11 @@ function buildLuaAST(sourceFile: TsAST.SourceFile) : LuaAST.SourceFile {
             if (initializer != undefined) {
                 const expression = buildExpression(initializer);
                 
-                luaLocalStatement = new LuaAST.LocalStatement(name, expression);
+                luaLocalStatement = new LuaAST.LocalStatement(name, type, expression);
                 
                 luaSourceFile.children.push(luaLocalStatement);
             } else {
-                luaLocalStatement = new LuaAST.LocalStatement(name);
+                luaLocalStatement = new LuaAST.LocalStatement(name, type);
 
                 luaSourceFile.children.push(luaLocalStatement);
             }
