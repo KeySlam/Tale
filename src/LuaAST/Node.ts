@@ -15,6 +15,10 @@ export class Node {
     return currentNode;
   }
 
+  getVariables(): VariableDeclaration[] | undefined {
+    return undefined;
+  }
+
   getParentScope(): ScopedNode | undefined {
     let currentNode: Node | undefined = this.parent;
 
@@ -30,10 +34,9 @@ export class Node {
   }
 }
 
-export class VariableDeclaration extends Node {
-  constructor(public name: string, public type: Type) {
-    super();
-  }
+export interface VariableDeclaration {
+  name: string;
+  type: Type;
 }
 
 export class ScopedNode extends Node {
@@ -44,9 +47,11 @@ export class ScopedNode extends Node {
     this.children.push(child);
     child.parent = this;
 
-    if (child instanceof VariableDeclaration) {
-      this.variableDeclarations.set(child.name, child);
-    }
+    child
+      .getVariables()
+      ?.forEach((variable) =>
+        this.variableDeclarations.set(variable.name, variable)
+      );
   }
 
   isInScope(targetName: string): boolean {

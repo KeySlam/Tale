@@ -1,11 +1,18 @@
-import { Type, VariableDeclaration } from "./Node";
+import { Type, VariableDeclaration, Node } from "./Node";
 import { Expression } from "./Expressions/Expression";
 
-export class LocalStatement extends VariableDeclaration {
-  constructor(name: string, type: Type, public expression?: Expression) {
-    super(name, type);
+export class LocalStatement extends Node {
+  constructor(public name: string, public type: Type, public expression?: Expression) {
+    super();
 
     if (expression) expression.parent = this;
+  }
+
+  getVariables (): VariableDeclaration[] {
+    return [{
+      name: this.name,
+      type: this.type
+    }]
   }
 
   getStringRepresentation(): string {

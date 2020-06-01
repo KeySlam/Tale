@@ -97,7 +97,9 @@ function buildLuaAST(sourceFile: TsAST.SourceFile) : LuaAST.SourceFile {
         }
 
         if (TsAST.TypeGuards.isVariableDeclaration(descendant)) {
-            let variableDeclaration = descendant as TsAST.VariableDeclaration;
+            // TODO: handle destructuring
+            // https://github.com/dsherret/ts-morph/issues/698#issuecomment-529283450
+            let variableDeclaration = descendant;
 
             const type = variableDeclaration.getType()
             const name = variableDeclaration.getName()
